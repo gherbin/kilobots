@@ -153,3 +153,5 @@ fabric.properties
 /logs
 restat*
 output_file.txt
+/sandbox.py
+/get_hexa_coord.py
