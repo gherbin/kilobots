@@ -158,12 +158,17 @@ def test_edge_follow(visu=False, paper_world=False):
         ax.set_xlim([0, 25])
         ax.set_ylim([0, 25])
         ax.set_aspect('equal')
-    nb_steps = 500000
+    nb_steps = 50000
     for i in range(nb_steps):
-        if nb_steps % 100 and all([bot.state == state.State.JOINED_SHAPE for bot in my_word.schedule.agents]):
-            break
+        if nb_steps % 100:
+            bots = my_word.schedule.agents
+            condition = all([bot.state == state.State.JOINED_SHAPE for bot in bots]) or \
+                        any([bot.met_root_twice for bot in bots])
+            if condition:
+                for b in bots:
+                    print(b)
+                break
         my_word.step()
-        nb_steps +=1
         if visu:
             x_to_plot, y_to_plot = list(zip(*[bot.pos for bot in my_word.schedule.agents]))
             img.set_data(x_to_plot, y_to_plot)
@@ -173,7 +178,7 @@ def test_edge_follow(visu=False, paper_world=False):
 
             fig.canvas.draw()
             fig.canvas.flush_events()
-
+    print("Number of steps = " + nb_steps)
     agents_positions = my_word.datacollector.get_agent_vars_dataframe()
     time_stamp = round(time())
     folder = r'logs/'
@@ -354,7 +359,7 @@ def test_rectangle(num_agents = 100, visu=False):
     height = 50
     center = (float(width // 2), float(height // 2))
     robots_world_pos = utils.get_agents_coordinates(center, num_agents, hexa_type="rectangle")
-    shape = Shape(1, np.ones((11,19)))
+    shape = Shape(1, np.ones((13,8))) #11,19 ||8,13
     my_word = World(num_seeds, num_agents, width, height, robots_world_pos, shape)
 
     if visu:
@@ -367,19 +372,26 @@ def test_rectangle(num_agents = 100, visu=False):
 
         x_to_plot, y_to_plot = list(zip(*[bot.pos for bot in my_word.schedule.agents]))
         img, = plt.plot(x_to_plot, y_to_plot, '.b', markersize=1)
-
-
         ax.set_xlim([0, 50])
         ax.set_ylim([0, 50])
         ax.set_aspect('equal')
-    nb_steps = 700000
+    nb_steps = 50000
     for i in range(nb_steps):
-        if nb_steps % 1000 :
-            condition = all([bot.state == state.State.JOINED_SHAPE for bot in my_word.schedule.agents])
-            if condition:
-               break
+        if nb_steps % 1000:
+            bots = my_word.schedule.agents
+            condition1 = all([bot.state == state.State.JOINED_SHAPE for bot in bots])
+            if condition1:
+                for b in bots:
+                    print(b)
+                    print("Stop because all joined")
+                break
+            condition2 = any([bot.met_root_twice for bot in bots])
+            if condition2:
+                for b in bots:
+                    print(b)
+                    print("Stop because met_root_twice")
+                break
         my_word.step()
-        nb_steps += 1
         if visu:
             x_to_plot, y_to_plot = list(zip(*[bot.pos for bot in my_word.schedule.agents]))
             img.set_data(x_to_plot, y_to_plot)
@@ -389,7 +401,7 @@ def test_rectangle(num_agents = 100, visu=False):
 
             fig.canvas.draw()
             fig.canvas.flush_events()
-
+    print("Number of steps = " + str(nb_steps))
     agents_positions = my_word.datacollector.get_agent_vars_dataframe()
     time_stamp = round(time())
     folder = r'logs/02062020/'
@@ -418,4 +430,4 @@ if __name__ == "__main__":
     # main()
     # test_is_in_shape()
     # server_start()
-    test_rectangle(num_agents= 10, visu=True)
+    test_rectangle(num_agents= 100, visu=False)

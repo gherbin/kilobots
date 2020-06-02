@@ -29,13 +29,13 @@ def get_realistic_world(num_agents = 5):
     mymap = np.array(
         [[1, 1],
          [1,0]])
-    myshape = Shape(2.5, mymap)
+    myshape = Shape(1, mymap)
     print(myshape)
     dummy_word = World(num_seeds, num_agents, width, height, robots_world_pos, myshape)
     return dummy_word
 
 def get_paper_shape():
-    return Shape(2.1, np.array([[1,1], [1,0]]))
+    return Shape(2.51, np.array([[1,1], [1,0]]))
 
 def get_dummy_bot(shape = None):
     return Robot(unique_id=999, model = None, world_pos = (0,0), shape = shape)

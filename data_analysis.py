@@ -36,7 +36,7 @@ def get_dict_df_agents(filename):
     dic_df = {}
     for agentID in agent_ids: #[4,5,6,7,8,9]:
         dic_df[str(agentID)] = df[df["AgentID"] == agentID]
-    return dic_df
+    return dic_df, df
 
 def plot_path(dic_df):
     fig, axes = plt.subplots(1,2, figsize=(8,4))
@@ -98,10 +98,26 @@ def plot_final_positions(dic_df):
     ax.axis('equal')
     ax.set_aspect('equal')
 
+def compute_mse(df):
+
+    # get the position of the last steps
+    print(df.head(10))
+    # convert in a numpy array, shape = (num_agents, 2)
+    last_step = np.max(df["Step"])
+    # get the local position of the last steps
+    print(df[df["Step"] == last_step])
+    # convert in a numpy array, shape = (num_agents, 2)
+
+    # check the size of the two arrays
+
+    # compute MSE
+
+    print("mse")
+
 
 def process_results():
-    folder = r'logs/'
-    filename = folder +'test_ef_agents22_d1.05_TRideal_DIV2_SP0.015_1591089524.csv'
+    folder = r'logs/02062020/'
+    filename = folder +'1591111242_test_rect_agents100_d1.05_TRreal_DIV2_SP0.02.csv'
     #'test_rect_agents100_d1.1_TRreal_DIV2_SP0.01_1590305124.csv'
     #test_ef_agents22_d1_TRreal_DIV4_SP0.01_1590240930.csv'
     #test_ef_agents22_d1_TRreal_DIV2_SP0.01_1590240005.csv
@@ -122,8 +138,9 @@ def process_results():
 
     # test_ef_agents22_d1.125_TRreal_SP0.01_1590226835.csv => divide = 2 => still moving
     #
-    dict_agents = get_dict_df_agents(filename)
-    # print(df.head(50))
+    dict_agents, df_agents = get_dict_df_agents(filename)
+    compute_mse(df_agents)
+    # print(dict_agents["0"].head(5))
     plot_path(dict_agents)
     plot_final_positions(dict_agents)
 
