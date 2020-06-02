@@ -125,7 +125,7 @@ def test_distance():
 def test_edge_follow(visu=False, paper_world=False):
     num_agents = 22
     if not paper_world:
-        num_agents = 6
+        num_agents = 8
         num_seeds = 4  # should always be 4
         width = 25
         height = 25
@@ -199,23 +199,27 @@ def test_is_in_shape():
     #               height=22,
     #               robots_world_pos=utils.get_agents_coordinates((11.0,11.0), 20),
     #               shape= test_utils.get_custom_shape(1, np.array([[1,0],[1,1]])) )
-    shape = test_utils.get_custom_shape(2.5, np.array([[1, 1], [1, 0]]))
+    # shape = test_utils.get_custom_shape(2.5, np.array([[1, 1], [1, 0]]))
+    shape = test_utils.get_paper_shape()
+    # shape = Shape(scale = 0.5, map=np.array([[1,0,0],[1,1,1]]))
     print(shape)
     s_pos_x = []
     s_pos_y = []
-    for i in np.arange(-1, 5, 0.1):
-        for j in np.arange(-1, 5, 0.1):
+    for i in np.arange(-1,5, 0.05):
+        for j in np.arange(-1, 5, 0.05):
             s_pos_x.append(i)
             s_pos_y.append(j)
-    print(len(s_pos_x))
-    print(len(s_pos_y))
+    # print(len(s_pos_x))
+    # print(len(s_pos_y))
     bot = test_utils.get_dummy_bot(shape)
     bot.is_localized = True
+    bot._has_met_coord = True
+
     results = []
 
     for x, y in zip(s_pos_x, s_pos_y):
         bot.set_s_pos((x, y))
-        z = 0.1
+        z = 0.01
         if bot.is_in_shape():
             z = 5
         results.append((x, y, z))
@@ -368,10 +372,12 @@ def test_rectangle(num_agents = 100, visu=False):
         ax.set_xlim([0, 50])
         ax.set_ylim([0, 50])
         ax.set_aspect('equal')
-    nb_steps = 1000000
+    nb_steps = 700000
     for i in range(nb_steps):
-        if nb_steps % 50000 and all([bot.state == state.State.JOINED_SHAPE for bot in my_word.schedule.agents]):
-            break
+        if nb_steps % 1000 :
+            condition = all([bot.state == state.State.JOINED_SHAPE for bot in my_word.schedule.agents])
+            if condition:
+               break
         my_word.step()
         nb_steps += 1
         if visu:
@@ -386,14 +392,14 @@ def test_rectangle(num_agents = 100, visu=False):
 
     agents_positions = my_word.datacollector.get_agent_vars_dataframe()
     time_stamp = round(time())
-    folder = r'logs/'
-    filename = "test_rect" + \
-               "_agents" + str(num_agents) + \
-               "_d" + str(parameters.DESIRED_DISTANCE) + \
-               "_TR" + str(parameters.TRILATERATION_TYPE) + \
-               "_DIV" + str(parameters.DIVIDE_LOCALIZE) + \
-               "_SP" + str(parameters.SPEED) + \
-               "_" + str(time_stamp) + ".csv"
+    folder = r'logs/02062020/'
+    filename = str(time_stamp) + \
+                "_test_rect" + \
+                "_agents" + str(num_agents) + \
+                "_d" + str(parameters.DESIRED_DISTANCE) + \
+                "_TR" + str(parameters.TRILATERATION_TYPE) + \
+                "_DIV" + str(parameters.DIVIDE_LOCALIZE) + \
+                "_SP" + str(parameters.SPEED) + ".csv"
 
     agents_positions.to_csv(folder + filename)
     # data_analysis.plot_position_vs_steps(agents_positions, range(4, 4 + num_agents))
@@ -406,10 +412,10 @@ if __name__ == "__main__":
     # test_one_agent_movement()
     # test_get_shape()
     # test_distance()
-    # test_edge_follow(visu=False, paper_world=False)
+    # test_edge_follow(visu=False, paper_world=True)
     # test_gradient()
     # test_localize()
     # main()
     # test_is_in_shape()
     # server_start()
-    test_rectangle(num_agents= 100, visu=False)
+    test_rectangle(num_agents= 10, visu=True)

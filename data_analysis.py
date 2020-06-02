@@ -101,7 +101,8 @@ def plot_final_positions(dic_df):
 
 def process_results():
     folder = r'logs/'
-    filename = folder + 'test_rect_agents100_d1_TRreal_DIV2_SP0.01_1590254709.csv'
+    filename = folder +'test_ef_agents22_d1.05_TRideal_DIV2_SP0.015_1591089524.csv'
+    #'test_rect_agents100_d1.1_TRreal_DIV2_SP0.01_1590305124.csv'
     #test_ef_agents22_d1_TRreal_DIV4_SP0.01_1590240930.csv'
     #test_ef_agents22_d1_TRreal_DIV2_SP0.01_1590240005.csv
     #test_ef_agents22_d1_TRreal_DIV2_SP0.02_1590239656.csv
