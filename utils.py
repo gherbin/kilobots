@@ -30,13 +30,13 @@ def get_agents_coordinates(center, num_agents, hexa_type ="paper"):
              [-1, -2, 3], [0, -3, 3],[1, -4, 3], [-2, -2, 4], [-1, -3, 4], [0, -4, 4], [1, -5, 4],
              [-3, -2, 5], [-2, -3, 5], [-1, -4, 5], [0, -5, 5], [1, -6, 5], [-4, -2, 6], [-3, -3, 6],
              [-2, -4, 6], [-1, -5, 6], [0, -6, 6], [1, -7, 6], [-4, -3, 7]])
-    else:
+    elif hexa_type == "rectangle":
         hexa = np.vstack((np.array([[0, 0, 0], [1, -1, 0], [0, -1, 1], [1, 0, -1]]),
                           np.array([coord for coord in get_hexa_coord(20)])))
 
     cubic_hexa = hexa[:, [0, 2]]
-    Hex2Cart = np.array([[np.sqrt(3), np.sqrt(3) / 2], [0, -3 / 2]])*1/np.sqrt(3)
-    cart = np.dot(Hex2Cart, cubic_hexa.T)
+    hex2Cart = np.array([[np.sqrt(3), np.sqrt(3) / 2], [0, -3 / 2]])*1/np.sqrt(3)
+    cart = np.dot(hex2Cart, cubic_hexa.T)
 
     cart_sliced = cart[:,0: 4+num_agents].copy()
     cart_sliced[0, :] = cart_sliced[0, :] + c_x-0.5

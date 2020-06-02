@@ -17,6 +17,7 @@ class Robot(Agent):
             self.pos = (_x, _y)
         else:
             self.pos = world_pos
+        self._old_y = self.pos[1]
         self.orn = Orientation.N
 
         # intrinsic variables
@@ -36,8 +37,15 @@ class Robot(Agent):
         self._s_pos_memory_size = 2
         self._s_pos_memory_x = np.tile(np.array([np.float('inf'), 0]), self._s_pos_memory_size)
         self._s_pos_memory_y = np.tile(np.array([np.float('inf'), 0]), self._s_pos_memory_size)
+
+        # indicates if the agent has met the seed
         self._has_met_coord = False
+        # indicates stopping condition
         self.met_root_twice = False
+        # helpers
+        self.crossed = 0 # cross the X World axis (= external stopping condition)
+        self.limit_crossing = self.model.space.height // 2
+
         self._s_gradient_value = parameters.GRADIENT_MAX
         self.shape = shape
         self.radius = parameters.NEIGHBOR_RADIUS  # radius to look for neighbours
@@ -315,19 +323,13 @@ class Robot(Agent):
         self.is_localized = False
 
         if utils.at_least_three_non_colinear(s_positions_neighbors):
-
             if (((-0.5, 0) in s_positions_neighbors) and  # met_root
                     ((0.5, 0) in s_positions_neighbors) and  # met_v1
                     ((0.0, -0.8660254037844387) in s_positions_neighbors) and  # met_v2
                     ((0.0, 0.8660254037844387) in s_positions_neighbors)):  # met_v3
                 self._has_met_coord = True
-                if self._has_met_coord and \
-                        (not ((-0.5, 0) in [p.get_s_pos() for p in (self.previous_neighbors or [])]) )and \
-                        self.state == State.MOVE_WHILE_OUTSIDE :
-                    # agent has been by seeds and
-                    # root was NOT in the previous neighbors
-                    # agent is moving outside
-                    self.met_root_twice = True
+            if self.crossed > 1:
+                self.met_root_twice = True
 
 
             if parameters.TRILATERATION_TYPE == "opt":
@@ -367,9 +369,11 @@ class Robot(Agent):
         #     print("Attempt to move but robot stationary")
         #     return
         dx, dy, = utils.get_deltas(direction_to_move, self.orn)
+        self._old_y= self.pos[1]
         new_pos = (self.pos[0] + dx * parameters.SPEED * self.intrinsic_speed_factor,
                    self.pos[1] + dy * parameters.SPEED * self.intrinsic_speed_factor)
-
+        if (self._old_y < self.limit_crossing)  and (new_pos[1] > self.limit_crossing):
+            self.crossed+=1
         self.model.space.move_agent(self, new_pos)
 
         # update orientation according to movement performed
