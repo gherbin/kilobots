@@ -49,9 +49,6 @@ class World(Model):
             # if use of uncertainties, set a variable speed to all robots
             if parameters.USE_SPEED_UNCERTAINTIES:
                 robot.intrinsic_speed_factor = speed_factors[i]
-
-
-
             # add the new robot to scheduler
             self.schedule.add(robot)
             # place new robot in starting position

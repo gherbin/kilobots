@@ -48,7 +48,7 @@ def get_agents_coordinates(center, num_agents, hexa_type ="paper"):
 def get_deltas(dir, orn):
     '''
 
-    :param dir: desired movement direction
+    :param dir: desired movement direction {Direction.FWD, Direction.FWD_CW, Direction.FWD_CCW}
     :param orn: current robot orientation
     :return: dx, dy = {-1,0,1},{-1,0,1} : displacement direction required
     '''
@@ -166,12 +166,17 @@ def get_hexa_coord(radius):
     hexa_k = []
     hexa_l = []
     for i in range(radius):
-        for j in range(-i, i+1):
-            for k in range(-i, i+1):
+        for j in range(-i, i + 1):
+            for k in range(-i, i + 1):
                 if k <= -1:
-                    for l in range(-i, i+1):
-                        if l >= 2:
-                            if (np.abs(j) + np.abs(k)+np.abs(l) == 2*i) and (j+k+l == 0):
+                    for l in range(-i, i + 1):
+                        if l >= 3:
+                            if (np.abs(j) + np.abs(k) + np.abs(l) == 2 * i) and (j + k + l == 0):
+                                hexa_j.append(j)
+                                hexa_k.append(k)
+                                hexa_l.append(l)
+                        elif l >= 2 and j < 1:
+                            if (np.abs(j) + np.abs(k) + np.abs(l) == 2 * i) and (j + k + l == 0):
                                 hexa_j.append(j)
                                 hexa_k.append(k)
                                 hexa_l.append(l)

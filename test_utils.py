@@ -33,7 +33,7 @@ def get_realistic_world(num_agents = 5):
     return dummy_word
 
 def get_paper_shape():
-    return Shape(2.51, np.array([[1,1], [1,0]]))
+    return Shape(2.5, np.array([[1,1], [1,0]]))
 
 def get_dummy_bot(shape = None):
     return Robot(unique_id=999, model = get_paper_world() , world_pos = (0,0), shape = shape)

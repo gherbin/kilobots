@@ -21,6 +21,7 @@ class Robot(Agent):
         self.orn = Orientation.N
 
         # intrinsic variables
+        # model of speed variation
         self.intrinsic_speed_factor = intrinsic_speed_factor
 
 
@@ -66,7 +67,10 @@ class Robot(Agent):
         self.neighbors = self.get_neighbors()
 
         if (self.unique_id > 3) and (self.timer % 500 == 0):
+            if parameters.USE_RARE_EVENT_SPEED and (np.random.uniform(0,1,1) > parameters.RARE_EVENT_THRESHOLD):
+                self.intrinsic_speed_factor = 0
             print(self)
+
         if self.state == State.START:
             self._step_start()
         elif self.state == State.WAIT_TO_MOVE:
@@ -213,8 +217,10 @@ class Robot(Agent):
         return neighbors
 
     def get_distance(self, agent):
-        return np.linalg.norm(np.array(self.pos) - np.array(agent.pos), ord=2)
-        #
+        uncertainty = 0
+        if parameters.USE_DISTANCE_UNCERTAINTY:
+            uncertainty = np.random.uniform(-parameters.DISTANCE_ACCURACY, parameters.DISTANCE_ACCURACY)
+        return np.linalg.norm(np.array(self.pos) - np.array(agent.pos), ord=2)+uncertainty
 
     def get_s_distance(self, agent):
         '''
@@ -240,24 +246,22 @@ class Robot(Agent):
         if self.neighbors is None:
             self.neighbors = self.get_neighbors()
         assert len(self.neighbors) > 0, "neighbors is empty"
-        sP = np.array([agent.pos for agent in self.neighbors])
-        distances = np.linalg.norm(sP - np.array(self.pos), ord=2, axis=1)
+        distances = np.array( tuple(map(lambda p: self.get_distance(p), self.neighbors)))
         ind = np.argmin(distances)
         return self.neighbors[ind]
 
     def get_neighbors_distances(self, from_stationary_only=False):
+        stationary_neighbors = []
         if self.neighbors is None:
             self.neighbors = self.get_neighbors()
         if from_stationary_only:
             stationary_neighbors = [neighbor for neighbor in self.neighbors if neighbor.is_stationary]
-
+        else:
+            raise NotImplementedError
         if len(stationary_neighbors) > 0:
-            # print("debug dist: get_neighbors_distances -- START")
-            # print("debug dist: neighbors of self ("+ str(self.unique_id)+ ') = '+str([a.unique_id for a in neighbors]))
-            sP = np.array([agent.pos for agent in stationary_neighbors])
-            # print("debug dist: neighbors POS of : "+ str(self.pos))
-            # print("debug dist: neighbors POS of self.neighbors: \n"+ str(sP))
-            distances = np.linalg.norm(sP - np.array(self.pos), ord=2, axis=1)
+            # sP = np.array([agent.pos for agent in stationary_neighbors])
+            # distances = np.linalg.norm(sP - np.array(self.pos), ord=2, axis=1)
+            distances = np.array(tuple(map(lambda p: self.get_distance(p), stationary_neighbors)))
         else:
             distances = []
         # print("debug dist: All neighbors distances: ", distances)
@@ -373,8 +377,10 @@ class Robot(Agent):
         self._old_y= self.pos[1]
         new_pos = (self.pos[0] + dx * parameters.SPEED * self.intrinsic_speed_factor,
                    self.pos[1] + dy * parameters.SPEED * self.intrinsic_speed_factor)
+
         if (self._old_y < self.limit_crossing)  and (new_pos[1] > self.limit_crossing):
             self.crossed+=1
+
         self.model.space.move_agent(self, new_pos)
 
         # update orientation according to movement performed
@@ -398,7 +404,8 @@ class Robot(Agent):
 
         if (not self.is_stationary) and self._has_met_coord:
             prev_pos = np.array([self._s_pos_memory_x[-1], self._s_pos_memory_y[-1]])
-            return np.linalg.norm(np.array(self._s_pos) - prev_pos, ord=2) <= 1 * parameters.SPEED
+            # todo: 1.1 should be a parameter
+            return np.linalg.norm(np.array(self._s_pos) - prev_pos, ord=2) <= 1.1 * parameters.SPEED
         else:
             result_x = np.max(self._s_pos_memory_x) == np.min(self._s_pos_memory_x)
             result_y = np.max(self._s_pos_memory_y) == np.min(self._s_pos_memory_y)
@@ -406,20 +413,22 @@ class Robot(Agent):
 
     def __str__(self):
         res = "robot:{ unique_id = " + str(self.unique_id) + \
-              "; state = " + str(self.state) + \
-              "; is_seed = " + str(self.is_seed) + \
-              "; is_stationary = " + str(self.is_stationary) + \
-              "; is_localized = " + str(self.is_localized) + \
-              "; pos = " + str(np.round(self.pos, 2)) + \
-              "; orn = " + str(self.orn) + \
-              "; s_pos = " + str(np.round(self._s_pos, 2)) + \
-              "; has_met_coord = " + str(self._has_met_coord) + \
-              "; met_root_twice = " + str(self.met_root_twice) + \
-              "; s_gradient = " + str(self._s_gradient_value) + \
-              "; neighbors = " + str([b.unique_id if b is not None else '/' for b in (self.neighbors or [])]) + \
-              "; previous_neighbors = " + str([b.unique_id if b is not None else '/'
-                                               for b in (self.previous_neighbors or [])]) + \
-              "}"
+            "; state = " + str(self.state) + \
+            "; is_seed = " + str(self.is_seed) + \
+            "; is_stationary = " + str(self.is_stationary) + \
+            "; is_localized = " + str(self.is_localized) + \
+            "; pos = " + str(np.round(self.pos, 2)) + \
+            "; orn = " + str(self.orn) + \
+            "; s_pos = " + str(np.round(self._s_pos, 2)) + \
+            "; has_met_coord = " + str(self._has_met_coord) + \
+            "; met_root_twice = " + str(self.met_root_twice) + \
+            "; s_gradient = " + str(self._s_gradient_value) + \
+            "; intrinsic_speed_factor = " + str(self.intrinsic_speed_factor) + \
+            "}"
+            # "; neighbors = " + str([b.unique_id if b is not None else '/' for b in (self.neighbors or [])]) + \
+            # "; previous_neighbors = " + str([b.unique_id if b is not None else '/'
+            #                                  for b in (self.previous_neighbors or [])]) + \
+            # "}"
         return res
 
 
