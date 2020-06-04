@@ -125,7 +125,7 @@ def test_distance():
 def test_edge_follow(visu=False, paper_world=False):
     num_agents = 22
     if not paper_world:
-        num_agents = 8
+        num_agents = 10
         num_seeds = 4  # should always be 4
         width = 25
         height = 25
@@ -133,6 +133,7 @@ def test_edge_follow(visu=False, paper_world=False):
         robots_world_pos = utils.get_agents_coordinates(center, num_agents, hexa_type = "paper")
         shape = test_utils.get_paper_shape()
         my_word = World(num_seeds, num_agents, width, height, robots_world_pos, shape)
+        my_word = test_utils.get_realistic_world(num_agents)
     else:
         my_word = test_utils.get_paper_world()
 
@@ -212,8 +213,8 @@ def test_is_in_shape():
     print(shape)
     s_pos_x = []
     s_pos_y = []
-    for i in np.arange(-1,5, 0.05):
-        for j in np.arange(-1, 5, 0.05):
+    for i in np.arange(-1,6, 0.05):
+        for j in np.arange(-1, 6, 0.05):
             s_pos_x.append(i)
             s_pos_y.append(j)
     # print(len(s_pos_x))
@@ -239,7 +240,7 @@ def test_is_in_shape():
     print(results)
 
 
-def test_gradient():
+def test_gradient(world = "paper"):
     """
     Build a small world and check that the gradients are ok: 1 seed = 0; other seeds = 1; then increase
     :return:
@@ -262,7 +263,12 @@ def test_gradient():
     #
     # del my_world
 
-    dummy_word = test_utils.get_paper_world()
+    if world == "paper":
+        dummy_word = test_utils.get_paper_world()
+    elif world == "real":
+        dummy_word = test_utils.get_realistic_world(num_agents=100)
+    else:
+        raise ValueError('Unkniwn world value' + str(world))
     print(dummy_word)
     bots = dummy_word.schedule.agents
     for bot in bots:
@@ -344,7 +350,7 @@ def get_dummy_world(num_agents=3, shape_shape=(3, 3), width=11, height=11):
     # width = 20
     # height = 20
     center = (float(width // 2), float(height // 2))
-    robots_world_pos = utils.get_agents_coordinates(center, num_agents)
+    robots_world_pos = utils.get_agents_coordinates(center, num_agents, hexa_type = "paper")
     # create a world
     shape = utils.build_shape(width, height, shape_shape)
     dummy_word = World(num_seeds, num_agents, width, height, robots_world_pos, shape)
@@ -361,7 +367,7 @@ def test_rectangle(num_agents = 100, visu=False):
     height = 50
     center = (float(width // 2), float(height // 2))
     robots_world_pos = utils.get_agents_coordinates(center, num_agents, hexa_type="rectangle")
-    shape = Shape(1, np.ones((6,4))) # 13, 8
+    shape = Shape(1, np.ones((18,10))) # 13, 8
     my_word = World(num_seeds, num_agents, width, height, robots_world_pos, shape)
 
     if visu:
@@ -408,7 +414,7 @@ def test_rectangle(num_agents = 100, visu=False):
     print("Number of steps = " + str(iter))
     agents_positions = my_word.datacollector.get_agent_vars_dataframe()
     time_stamp = round(time())
-    folder = r'logs/02062020/'
+    folder = r'logs/03062020/'
     filename = str(time_stamp) + \
                 "_test_rect" + \
                 "_agents" + str(num_agents) + \
@@ -424,14 +430,74 @@ def test_rectangle(num_agents = 100, visu=False):
         plt.show()
 
 
+def visu_world():
+    '''
+    Quick and dirty function to plot the initial configuration of two worlds. Used for report only.
+    '''
+    paper_world = test_utils.get_paper_world()
+    real_world = test_utils.get_realistic_world(num_agents=100)
+
+    fig, axes = plt.subplots(1,2)
+    center0 = (float(paper_world.space.width // 2), float(paper_world.space.height // 2))
+    rect01 = plt.Rectangle(center0, 5.1, 2.55, facecolor="green", alpha=0.2)
+    rect02 = plt.Rectangle(center0, 2.55, 5.1, facecolor="green", alpha=0.2)
+    axes[0].add_patch(rect01)
+    axes[0].add_patch(rect02)
+    # x_to_plot, y_to_plot = list(zip(*[bot.pos for bot in paper_world.schedule.agents]))
+
+    bots = paper_world.schedule.agents
+    # final_grad = [str(bot.get_s_gradient_value()) for bot in bots]
+    final_x = [bot.pos[0] for bot in bots]
+    final_y = [bot.pos[1] for bot in bots]
+    seeds_x = [bot.pos[0] for bot in bots if bot.is_seed]
+    seeds_y = [bot.pos[1] for bot in bots if bot.is_seed]
+    agent_x = [bot.pos[0] for bot in bots if not bot.is_seed]
+    agent_y = [bot.pos[1] for bot in bots if not bot.is_seed]
+    # fig, ax = plt.subplots(1, 1)
+    axes[0].scatter(seeds_x, seeds_y, color='r')
+    axes[0].scatter(agent_x, agent_y, color='g')
+    for x, y in zip(final_x, final_y):
+        circ = plt.Circle((x, y), 0.5, facecolor="blue", alpha=0.2)
+        axes[0].add_patch(circ)
+
+    center1 = (float(real_world.space.width // 2), float(real_world.space.height // 2))
+    rect11 = plt.Rectangle(center1, 18, 10, facecolor="green", alpha=0.2)
+    axes[1].add_patch(rect11)
+    bots = real_world.schedule.agents
+    # final_grad = [str(bot.get_s_gradient_value()) for bot in bots]
+    final_x = [bot.pos[0] for bot in bots]
+    final_y = [bot.pos[1] for bot in bots]
+    seeds_x = [bot.pos[0] for bot in bots if bot.is_seed]
+    seeds_y = [bot.pos[1] for bot in bots if bot.is_seed]
+    agent_x = [bot.pos[0] for bot in bots if not bot.is_seed]
+    agent_y = [bot.pos[1] for bot in bots if not bot.is_seed]
+    # fig, ax = plt.subplots(1, 1)
+    axes[1].plot(seeds_x, seeds_y, '.r', markersize = 1)
+    axes[1].plot(agent_x, agent_y, '.g', markersize = 1)
+    for x, y in zip(final_x, final_y):
+        circ = plt.Circle((x, y), 0.5, facecolor="blue", alpha=0.2)
+        axes[1].add_patch(circ)
+
+    for ax in axes:
+        ax.set_aspect('equal', 'box')
+
+    fig.suptitle("Two acceptable initial configurations", fontsize=12)
+    # axes[1].legend(["shape", "seeds", "robot centers", "robots"])
+
+    # left = 0; bottom = 0.08; right = 0.95; top = 0.88; w =0n hspace = 0.24
+    fig.tight_layout()
+    plt.show()
+
 if __name__ == "__main__":
     # test_one_agent_movement()
     # test_get_shape()
     # test_distance()
-    # test_edge_follow(visu=False, paper_world=True)
-    # test_gradient()
+    # test_edge_follow(visu=False, paper_world=False)
+    test_gradient(world = "real")
     # test_localize()
     # main()
     # test_is_in_shape()
     # server_start()
-    test_rectangle(num_agents= 25, visu=False)
+    # test_rectangle(num_agents= 10, visu=False)
+    # visu_world()
+

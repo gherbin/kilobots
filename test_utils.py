@@ -21,16 +21,14 @@ def get_paper_world():
 
 def get_realistic_world(num_agents = 5):
     num_seeds = 4  # should always be 4
-    width = 25
-    height = 25
+    width = 50
+    height = 50
     center = (float(width // 2), float(height // 2))
-    robots_world_pos= get_agents_coordinates(center, num_agents)
+    robots_world_pos= get_agents_coordinates(center, num_agents, hexa_type = "rectangle")
+    print(len(robots_world_pos))
     # create a world
-    mymap = np.array(
-        [[1, 1],
-         [1,0]])
+    mymap = np.ones((4,2))
     myshape = Shape(1, mymap)
-    print(myshape)
     dummy_word = World(num_seeds, num_agents, width, height, robots_world_pos, myshape)
     return dummy_word
 
@@ -38,4 +36,4 @@ def get_paper_shape():
     return Shape(2.51, np.array([[1,1], [1,0]]))
 
 def get_dummy_bot(shape = None):
-    return Robot(unique_id=999, model = None, world_pos = (0,0), shape = shape)
+    return Robot(unique_id=999, model = get_paper_world() , world_pos = (0,0), shape = shape)

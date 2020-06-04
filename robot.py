@@ -301,9 +301,10 @@ class Robot(Agent):
         #         v = neighbor.get_s_gradient_value()
         #         if v < self._s_gradient_value:
         #             self._s_gradient_value = v
-        stationary_neighbors_s_gradient_value = [neighbor.get_s_gradient_value() for neighbor in self.neighbors \
-                                                 if neighbor.is_stationary and (
-                                                             self.get_distance(neighbor) < parameters.G)]
+        stationary_neighbors_s_gradient_value = [neighbor.get_s_gradient_value()
+                                                 for neighbor in self.neighbors
+                                                 if neighbor.is_stationary and
+                                                 (self.get_distance(neighbor) < parameters.G)]
         if len(stationary_neighbors_s_gradient_value):
             self._s_gradient_value = min(stationary_neighbors_s_gradient_value)
 
@@ -469,9 +470,3 @@ class Seed(Robot):
         self.is_localized = True
         self.compute_gradient()
         self.localize()
-
-    # def move_dir(self, dir):
-    #     raise RuntimeError("Seed: cannot move")
-
-    # def step(self):
-    #     pass
