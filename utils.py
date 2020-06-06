@@ -6,23 +6,16 @@ import parameters
 from scipy.optimize import minimize
 
 def get_agents_coordinates(center, num_agents, hexa_type ="paper"):
+    """
+    Computes the correct coordinates of the agents, according to an hexagonal lattice.
+    :param center: center of the world
+    :param num_agents: number of coordinates to return
+    :param hexa_type: one of {"paper", "rectangle"} to define the shape of the lattice
+    :return: a list of the coordinates for all agents (including seeds)
+    """
     c_x = center[0]
     c_y = center[1]
-    # positions = [(c_x-1, c_y), (c_x, c_y-1), (c_x+1, c_y), (c_x, c_y+1)]
-    #
-    # # square shape
-    # sq_size = np.int_(np.ceil(np.sqrt(num_agents)))
-    #
-    # # definition of possible x and y
-    # possible_x = np.arange(start = c_x, stop = c_x - sq_size, step=-1)
-    # possible_y = np.arange(start = c_y - 2, stop = c_y-2 - sq_size, step=-1)
-    #
-    # # elaboration of the list
-    # list_x = np.tile(possible_x, sq_size)
-    # list_y = np.repeat(possible_y, sq_size)
-    #
-    # # list of agent positions
-    # positions_agents = [(x,y) for x,y in zip(list_x, list_y) ]
+
     hexa = np.array([[0, 0, 0], [1, -1, 0], [0, -1, 1], [1, 0, -1]])
     if hexa_type == "paper":
         hexa = np.array(
@@ -35,8 +28,8 @@ def get_agents_coordinates(center, num_agents, hexa_type ="paper"):
                           np.array([coord for coord in get_hexa_coord(20)])))
 
     cubic_hexa = hexa[:, [0, 2]]
-    hex2Cart = np.array([[np.sqrt(3), np.sqrt(3) / 2], [0, -3 / 2]])*1/np.sqrt(3)
-    cart = np.dot(hex2Cart, cubic_hexa.T)
+    hex2cart = np.array([[np.sqrt(3), np.sqrt(3) / 2], [0, -3 / 2]])*1/np.sqrt(3)
+    cart = np.dot(hex2cart, cubic_hexa.T)
 
     cart_sliced = cart[:,0: 4+num_agents].copy()
     cart_sliced[0, :] = cart_sliced[0, :] + c_x-0.5
@@ -47,10 +40,9 @@ def get_agents_coordinates(center, num_agents, hexa_type ="paper"):
 
 def get_deltas(dir, orn):
     '''
-
     :param dir: desired movement direction {Direction.FWD, Direction.FWD_CW, Direction.FWD_CCW}
     :param orn: current robot orientation
-    :return: dx, dy = {-1,0,1},{-1,0,1} : displacement direction required
+    :return: dx, dy = {-1,0,1},{-1,0,1},... : displacement direction required
     '''
     dx = 0
     dy = 0
@@ -94,30 +86,11 @@ def get_deltas(dir, orn):
     return dx, dy
 
 
-def build_shape(world_width, world_height, size_of_shape):
-    w_ = world_width // 2
-    h_ = world_height// 2
-    background = np.zeros((w_,h_))
-    foreground = np.ones(size_of_shape)
-    mymap = background
-
-    size_desired = foreground.shape
-    # x = center[0]
-    x = 0
-    dx = size_desired[0]
-    # y = center[1]
-    y = 0
-    dy = size_desired[1]
-
-    if x+dx > w_:
-        raise ValueError("shape requested too large in width:" + str(x+dx) + " > " + str(w_))
-    if y+dy > h_:
-        raise ValueError("shape requested too large in height:" + str(y+dy) + " > " + str(h_))
-    mymap[x:x+dx , y:y+dy] = foreground
-    return Shape(1, mymap)
-
-
 def at_least_three_non_colinear(list_of_points):
+    """
+    :param list_of_points:
+    :return: True if at least three point of the list_of_points are non colinear. False otherwise
+    """
     # flag = 0
     for p0, p1, p2 in itertools.combinations(list_of_points, 3):
         if not collinear(p0, p1, p2):
@@ -126,11 +99,21 @@ def at_least_three_non_colinear(list_of_points):
 
 
 def collinear(p0, p1, p2):
+    """
+    :param p0, p1, p2: triplets of coordinates
+    :return: True if the triplets p0, p1 and p2 are colinear. It uses the determinant method
+    """
     x1, y1 = p1[0] - p0[0], p1[1] - p0[1]
     x2, y2 = p2[0] - p0[0], p2[1] - p0[1]
     return abs(x1 * y2 - x2 * y1) < parameters.EPSILON
 
 def trilateration(s_pos, s_pos_n_list, distances_n_list):
+    """
+    :param s_pos:
+    :param s_pos_n_list:
+    :param distances_n_list:
+    :return: the result of the minimization of the trilateration problem
+    """
     # locations: [ (lat1, long1), ... ]
     # distances: [ distance1,     ... ]
     result = minimize(
@@ -143,13 +126,10 @@ def trilateration(s_pos, s_pos_n_list, distances_n_list):
             'maxiter': 1e+8  # Maximum iterations
         }
     )
-    # print("Trilateration ended: message > " + str(result.message))
-    # print("Trilateration ended: success > " + str(result.success))
     return result.x
 
 def my_rmse(s_pos, s_pos_n_list, distances_n_list):
     """
-
     :param s_pos: (s_x, s_y)
     :param s_pos_n_list: [ (s_x_1, s_y_1), (s_x_2, s_y_2), ... ]
     :param distances_n_list: [ d1, d2, ... ]
@@ -162,6 +142,10 @@ def my_rmse(s_pos, s_pos_n_list, distances_n_list):
 
 
 def get_hexa_coord(radius):
+    """
+    :param radius: indicates the size of coordinates to compute. generally, ~20 for 100 robots works fine
+    :return: a list of the hexagonal coordinates as defined in [6]. Only acceptable coordinates are generated.
+    """
     hexa_j = []
     hexa_k = []
     hexa_l = []

@@ -28,4 +28,5 @@ model_params = {
     "height":25
 }
 
+raise DeprecationWarning("SERVER.PY IS NOT MAINTAINED ANYMORE")
 server = ModularServer(World, [bot_canvas], "Kilobots", model_params)

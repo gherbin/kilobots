@@ -1,7 +1,10 @@
 import numpy as np
 
-class Shape:
 
+class Shape:
+    """
+    Represent the image and scale factor given to the Kilobot
+    """
     def __init__(self, scale, map):
         self.scale = scale
         self.map = map

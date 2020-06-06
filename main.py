@@ -1,27 +1,30 @@
 import state
 from shape import Shape
 from world import World
-from robot import Robot
 from matplotlib import pyplot as plt
-import matplotlib as mpl
 import numpy as np
-import os
 from time import time
 import utils
 from direction import Direction, Orientation
-from server import server
 import test_utils
-import data_analysis
 import parameters
 
 
 def main():
-    test_edge_follow(False, paper_world=True)
+    # test_rectangle(num_agents=10, visu=False)
+    # test_edge_follow(visu=False, paper_world=True)
+    # test_one_agent_movement()
+    # test_get_shape()
+    # test_distance()
+    test_gradient(world = "paper")
+    # test_localize()
+    # test_is_in_shape()
+    # visu_world()
 
 
 def test_one_agent_movement():
     """
-    Simply test the movement of one agent, and print the agent's state.
+    Tests the movement of one agent, and print the agent's state. Toy function
     :return:
     """
     world = World(num_seeds=0,
@@ -29,7 +32,7 @@ def test_one_agent_movement():
                   width=5,
                   height=5,
                   robots_world_pos=[(3, 3)],
-                  shape=utils.build_shape(5, 5, (1, 1)))
+                  shape=test_utils.build_shape(5, 5, (1, 1)))
     print(world)
     agent_ = world.schedule.agents[0]
     print(agent_)
@@ -43,9 +46,13 @@ def test_one_agent_movement():
 
 
 def test_get_shape():
+    """
+    Toy test. print the shape loaded in an agent.
+    :return: /
+    """
     width = 22
     height = 22
-    my_shape = utils.build_shape(width, height, size_of_shape=(5, 10))
+    my_shape = test_utils.build_shape(width, height, size_of_shape=(5, 10))
     world = World(num_seeds=0,
                   num_agents=1,
                   width=22,
@@ -59,6 +66,10 @@ def test_get_shape():
 
 
 def test_distance():
+    """
+    Verifies the distances between robots. Toy function.
+    :return:
+    """
     world = World(num_seeds=0,
                   num_agents=2,
                   width=10,
@@ -72,6 +83,13 @@ def test_distance():
 
 
 def test_edge_follow(visu=False, paper_world=False):
+    """
+    test the complete algo according to the parameters
+    :param visu: if True, opens a visualization during the experiment. /!\ It slows down the process
+    Note that the shape represented is hardcoded and does not correspond to robot's loaded shape
+    :param paper_world: if True, load automatically the world from the main article. If False, load a realistic world,
+    :return:
+    """
     num_agents = 22
     if not paper_world:
         num_agents = 10
@@ -79,7 +97,7 @@ def test_edge_follow(visu=False, paper_world=False):
         width = 25
         height = 25
         center = (float(width // 2), float(height // 2))
-        robots_world_pos = utils.get_agents_coordinates(center, num_agents, hexa_type = "paper")
+        robots_world_pos = utils.get_agents_coordinates(center, num_agents, hexa_type="paper")
         shape = test_utils.get_paper_shape()
         my_word = World(num_seeds, num_agents, width, height, robots_world_pos, shape)
         my_word = test_utils.get_realistic_world(num_agents)
@@ -120,36 +138,38 @@ def test_edge_follow(visu=False, paper_world=False):
                     print(b)
                 break
         my_word.step()
-        iter +=1
+        iter += 1
         if visu:
             x_to_plot, y_to_plot = list(zip(*[bot.pos for bot in my_word.schedule.agents]))
             img.set_data(x_to_plot, y_to_plot)
             # final_grad = [str(bot.get_s_gradient_value()) for bot in my_word.schedule.agents]
             # for i, txt in enumerate(final_grad):
             #     ax.annotate(txt, (x_to_plot[i], y_to_plot[i]))
-
             fig.canvas.draw()
             fig.canvas.flush_events()
     print("Number of steps = " + str(iter))
     agents_positions = my_word.datacollector.get_agent_vars_dataframe()
     time_stamp = round(time())
-    folder = r'logs/04062020/'
+    folder = r'logs/06062020/'
     filename = str(time_stamp) + \
-                "_test_ef" + \
-                "_agents" + str(num_agents) + \
-                "_d" + str(parameters.DESIRED_DISTANCE) + \
-                "_TR" + str(parameters.TRILATERATION_TYPE) + \
-                "_DIV" + str(parameters.DIVIDE_LOCALIZE) + \
-                "_SP" + str(parameters.SPEED) + ".csv"
+               "_test_ef" + \
+               "_agents" + str(num_agents) + \
+               "_d" + str(parameters.DESIRED_DISTANCE) + \
+               "_TR" + str(parameters.TRILATERATION_TYPE) + \
+               "_DIV" + str(parameters.DIVIDE_LOCALIZE) + \
+               "_SP" + str(parameters.SPEED) + ".csv"
 
     agents_positions.to_csv(folder + filename)
-    # data_analysis.plot_position_vs_steps(agents_positions, range(4, 4 + num_agents))
     if visu:
         plt.ioff()
         plt.show()
 
 
 def test_is_in_shape():
+    '''
+    plots a graph with bold dots if a robot at that location is inside the shape, and a small dot if not.
+    :return:
+    '''
     # world = World(num_seeds=4,
     #               num_agents=20,
     #               width=22,
@@ -162,12 +182,10 @@ def test_is_in_shape():
     print(shape)
     s_pos_x = []
     s_pos_y = []
-    for i in np.arange(-1,6, 0.05):
+    for i in np.arange(-1, 6, 0.05):
         for j in np.arange(-1, 6, 0.05):
             s_pos_x.append(i)
             s_pos_y.append(j)
-    # print(len(s_pos_x))
-    # print(len(s_pos_y))
     bot = test_utils.get_dummy_bot(shape)
     bot.is_localized = True
     bot._has_met_coord = True
@@ -189,9 +207,10 @@ def test_is_in_shape():
     print(results)
 
 
-def test_gradient(world = "paper"):
+def test_gradient(world="paper"):
     """
-    Build a world and check that the gradients are ok: 1 seed = 0; other seeds = 1; then increase
+    Build a world and indicates the gradients on a plot representing this world: one seed => 0; other seeds => 1;
+    then the gradient should increase
     world = {"paper", "real"}
     :return:
     """
@@ -230,7 +249,7 @@ def test_gradient(world = "paper"):
 
     center = (float(dummy_word.space.width // 2), float(dummy_word.space.height // 2))
     rect1 = plt.Rectangle(center, 5.1, 2.55, facecolor="green", alpha=0.2)
-    rect2 = plt.Rectangle((center[0], center[1]+2.55), 2.55, 2.55, facecolor="green", alpha=0.2)
+    rect2 = plt.Rectangle((center[0], center[1] + 2.55), 2.55, 2.55, facecolor="green", alpha=0.2)
     ax.add_patch(rect1)
     ax.add_patch(rect2)
 
@@ -251,7 +270,7 @@ def test_gradient(world = "paper"):
 
 def test_localize():
     """
-    Creates the world
+    Plot the RMSE of the localization error per time step, according to the global parameter described.
     :return:
     """
     num_agents = 22
@@ -261,7 +280,7 @@ def test_localize():
     coef = float("inf")
     i = 0
     list_s_pos_clpt = []
-    while (i < parameters.STARTUP_TIME ): #and coef > 1e-5
+    while (i < parameters.STARTUP_TIME):  # and coef > 1e-5
         my_world.step()
         list_s_pos = [bot.get_s_pos() for bot in my_world.schedule.agents]
         list_s_pos_clpt.append(list_s_pos)
@@ -274,45 +293,47 @@ def test_localize():
 
     agents_positions = my_world.datacollector.get_agent_vars_dataframe()
     time_stamp = round(time())
-    folder = r'logs/'
-    filename = "test_localize_" + str(time_stamp) + ".csv"
+    folder = r'logs/06062020/'
+    filename = "test_localize_" + str(time_stamp) + \
+               "_" + str(parameters.TRILATERATION_TYPE) + \
+               "_" + str(round(parameters.USE_DISTANCE_UNCERTAINTY*parameters.DISTANCE_ACCURACY,3)) + \
+               ".csv"
 
     agents_positions.to_csv(folder + filename)
 
     fig, ax = plt.subplots(1, 1)
     ax.plot(rmse, '.-')
     ax.set_yscale('log')
+    ax.set_ylim([1e-8, 10])
+    ax.set_xlabel('time step')
+    ax.set_ylabel('RMSE')
+    ax.set_title('Error between ideal and computed local coordinates')
     plt.show()
 
 
-def get_dummy_world(num_agents=3, shape_shape=(3, 3), width=11, height=11):
-    # num_agents = 3
-    num_seeds = 4  # should always be 4
-    # width = 20
-    # height = 20
-    center = (float(width // 2), float(height // 2))
-    robots_world_pos = utils.get_agents_coordinates(center, num_agents, hexa_type = "paper")
-    # create a world
-    shape = utils.build_shape(width, height, shape_shape)
-    dummy_word = World(num_seeds, num_agents, width, height, robots_world_pos, shape)
-    return dummy_word
-
-
 def server_start():
-    server.launch()
+    raise DeprecationWarning("NOT SUPPORTED ANYMORE")
+    # server.launch()
 
 
-def test_rectangle(num_agents = 100, visu=False):
+def test_rectangle(num_agents=100, visu=False):
+    """
+    Perform a simulation run of the self-assembly algorithm for num_agents and a rectangular shape. The rectangle
+    shape dimensions are hard-coded here below. It saves a CSV file at the end of the execution
+    :param num_agents: number of agents participating in the run
+    :param visu: if True, opens a visualization of current simulation steps. /!\ it slows down the process.
+    Note that the shape represented is hardcoded and does not correspond to robot's loaded shape
+    :return: /
+    """
     num_seeds = 4  # should always be 4
     width = 50
     height = 50
     center = (float(width // 2), float(height // 2))
     robots_world_pos = utils.get_agents_coordinates(center, num_agents, hexa_type="rectangle")
 
-
     rect_width = 10
     rect_height = 5
-    shape = Shape(1, np.ones((rect_width,rect_height))) # 13, 8
+    shape = Shape(1, np.ones((rect_width, rect_height)))  # 13, 8
     my_word = World(num_seeds, num_agents, width, height, robots_world_pos, shape)
 
     if visu:
@@ -328,7 +349,7 @@ def test_rectangle(num_agents = 100, visu=False):
         ax.set_xlim([0, 50])
         ax.set_ylim([0, 50])
         ax.set_aspect('equal')
-    nb_steps_max = 100000
+    nb_steps_max = 15000
     iter = 0
     while iter < nb_steps_max:
         if iter % 1000 == 0:
@@ -346,7 +367,7 @@ def test_rectangle(num_agents = 100, visu=False):
                 print("Stop because met_root_twice")
                 break
         my_word.step()
-        iter +=1
+        iter += 1
         if visu:
             x_to_plot, y_to_plot = list(zip(*[bot.pos for bot in my_word.schedule.agents]))
             img.set_data(x_to_plot, y_to_plot)
@@ -359,19 +380,19 @@ def test_rectangle(num_agents = 100, visu=False):
     print("Number of steps = " + str(iter))
     agents_positions = my_word.datacollector.get_agent_vars_dataframe()
     time_stamp = round(time())
-    folder = r'logs/04062020/'
+    folder = r'logs/06062020/'
     filename = str(time_stamp) + \
-                "_test_rect" + \
-                "_agents" + str(num_agents) + \
-                "_d" + str(parameters.DESIRED_DISTANCE) + \
-                "_TR" + str(parameters.TRILATERATION_TYPE) + \
-                "_DIV" + str(parameters.DIVIDE_LOCALIZE) + \
-                "_SP" + str(parameters.SPEED) + \
-                "_MAP" + str(rect_width) + "-" + str(rect_height) + \
-                "_USP" + str(1*parameters.USE_SPEED_UNCERTAINTIES) + \
-                "_UDA" + str(parameters.DISTANCE_ACCURACY*parameters.USE_DISTANCE_UNCERTAINTY) + \
-                "_RE" + str(parameters.RARE_EVENT_THRESHOLD *parameters.USE_RARE_EVENT_SPEED) + \
-                ".csv"
+               "_test_rect" + \
+               "_agents" + str(num_agents) + \
+               "_d" + str(parameters.DESIRED_DISTANCE) + \
+               "_TR" + str(parameters.TRILATERATION_TYPE) + \
+               "_DIV" + str(parameters.DIVIDE_LOCALIZE) + \
+               "_SP" + str(parameters.SPEED) + \
+               "_MAP" + str(rect_width) + "-" + str(rect_height) + \
+               "_USP" + str(1 * parameters.USE_SPEED_UNCERTAINTIES) + \
+               "_UDA" + str(parameters.DISTANCE_ACCURACY * parameters.USE_DISTANCE_UNCERTAINTY) + \
+               "_RE" + str(parameters.RARE_EVENT_THRESHOLD * parameters.USE_RARE_EVENT_SPEED) + \
+               ".csv"
 
     agents_positions.to_csv(folder + filename)
     # data_analysis.plot_position_vs_steps(agents_positions, range(4, 4 + num_agents))
@@ -387,23 +408,19 @@ def visu_world():
     paper_world = test_utils.get_paper_world()
     real_world = test_utils.get_realistic_world(num_agents=100)
 
-    fig, axes = plt.subplots(1,2)
+    fig, axes = plt.subplots(1, 2)
     center0 = (float(paper_world.space.width // 2), float(paper_world.space.height // 2))
-    rect01 = plt.Rectangle(center0, 5.1, 2.55, facecolor="green", alpha=0.2)
-    rect02 = plt.Rectangle(center0, 2.55, 5.1, facecolor="green", alpha=0.2)
+    rect01 = plt.Polygon(np.array( [[0,0], [0,5.1], [2.55, 5.1], [2.55,2.55], [5.1, 2.55], [5.1, 0]]) + np.array(
+        center0),closed=True, fill=True, facecolor="green", alpha=0.2)
     axes[0].add_patch(rect01)
-    axes[0].add_patch(rect02)
-    # x_to_plot, y_to_plot = list(zip(*[bot.pos for bot in paper_world.schedule.agents]))
 
     bots = paper_world.schedule.agents
-    # final_grad = [str(bot.get_s_gradient_value()) for bot in bots]
     final_x = [bot.pos[0] for bot in bots]
     final_y = [bot.pos[1] for bot in bots]
     seeds_x = [bot.pos[0] for bot in bots if bot.is_seed]
     seeds_y = [bot.pos[1] for bot in bots if bot.is_seed]
     agent_x = [bot.pos[0] for bot in bots if not bot.is_seed]
     agent_y = [bot.pos[1] for bot in bots if not bot.is_seed]
-    # fig, ax = plt.subplots(1, 1)
     axes[0].scatter(seeds_x, seeds_y, color='r')
     axes[0].scatter(agent_x, agent_y, color='g')
     for x, y in zip(final_x, final_y):
@@ -411,19 +428,18 @@ def visu_world():
         axes[0].add_patch(circ)
 
     center1 = (float(real_world.space.width // 2), float(real_world.space.height // 2))
-    rect11 = plt.Rectangle(center1, 18, 10, facecolor="green", alpha=0.2)
+    rect11 = plt.Rectangle(center1, 10, 5, facecolor="green", alpha=0.2)
+
     axes[1].add_patch(rect11)
-    bots = real_world.schedule.agents
-    # final_grad = [str(bot.get_s_gradient_value()) for bot in bots]
+    bots = real_world.schedule.agents[0:29]
     final_x = [bot.pos[0] for bot in bots]
     final_y = [bot.pos[1] for bot in bots]
     seeds_x = [bot.pos[0] for bot in bots if bot.is_seed]
     seeds_y = [bot.pos[1] for bot in bots if bot.is_seed]
     agent_x = [bot.pos[0] for bot in bots if not bot.is_seed]
     agent_y = [bot.pos[1] for bot in bots if not bot.is_seed]
-    # fig, ax = plt.subplots(1, 1)
-    axes[1].plot(seeds_x, seeds_y, '.r', markersize = 1)
-    axes[1].plot(agent_x, agent_y, '.g', markersize = 1)
+    axes[1].plot(seeds_x, seeds_y, '.r', markersize=2)
+    axes[1].plot(agent_x, agent_y, '.g', markersize=2)
     for x, y in zip(final_x, final_y):
         circ = plt.Circle((x, y), 0.5, facecolor="blue", alpha=0.2)
         axes[1].add_patch(circ)
@@ -431,23 +447,16 @@ def visu_world():
     for ax in axes:
         ax.set_aspect('equal', 'box')
 
+    axes[1].set_title("Experimental World")
+    axes[1].set_xlabel("World x")
+    axes[1].set_ylabel("World y")
+
     fig.suptitle("Two acceptable initial configurations", fontsize=12)
-    # axes[1].legend(["shape", "seeds", "robot centers", "robots"])
     fig.subplots_adjust(left=0, bottom=0.08, right=0.95, top=0.88, wspace=0, hspace=0.24)
     # left = 0; bottom = 0.08; right = 0.95; top = 0.88; w =0n hspace = 0.24
-    fig.tight_layout()
+    # fig.tight_layout()
     plt.show()
 
-if __name__ == "__main__":
-    # test_one_agent_movement()
-    # test_get_shape()
-    # test_distance()
-    # test_edge_follow(visu=False, paper_world=True)
-    # test_gradient(world = "real")
-    # test_localize()
-    # main()
-    # test_is_in_shape()
-    # server_start()
-    test_rectangle(num_agents= 20, visu=False)
-    # visu_world()
 
+if __name__ == "__main__":
+    main()

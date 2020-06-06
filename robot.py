@@ -8,6 +8,9 @@ from state import State
 
 
 class Robot(Agent):
+    """
+    Represents the Kilobot
+    """
     def __init__(self, unique_id, model, world_pos=None, shape=None, intrinsic_speed_factor=1):
         super().__init__(unique_id, model)
         # attributes related to the world
@@ -24,7 +27,6 @@ class Robot(Agent):
         # model of speed variation
         self.intrinsic_speed_factor = intrinsic_speed_factor
 
-
         # attributes related to the swarm
         self.is_seed = False
         self.is_stationary = True
@@ -39,12 +41,13 @@ class Robot(Agent):
         self._s_pos_memory_x = np.tile(np.array([np.float('inf'), 0]), self._s_pos_memory_size)
         self._s_pos_memory_y = np.tile(np.array([np.float('inf'), 0]), self._s_pos_memory_size)
 
-        # indicates if the agent has met the seed
+        # indicates if the agent has met the seeds
         self._has_met_coord = False
         # indicates stopping condition
         self.met_root_twice = False
+
         # helpers
-        self.crossed = 0 # cross the X World axis (= external stopping condition)
+        self.crossed = 0  # cross the Y World axis (= external stopping condition)
         self.limit_crossing = self.model.space.height // 2
 
         self._s_gradient_value = parameters.GRADIENT_MAX
@@ -59,15 +62,23 @@ class Robot(Agent):
         self.timer = 0
 
     def advance(self):
+        """
+        Apply changes
+        :return: /
+        """
         self.state = self._next_state
 
     def step(self):
+        """
+        State machine of the Robot, as per Supplementary Material. See ref [5] and [6] of the report.
+        :return:/
+        """
         self.timer += 1
         self.previous_neighbors = self.neighbors
         self.neighbors = self.get_neighbors()
 
-        if (self.unique_id > 3) and (self.timer % 500 == 0):
-            if parameters.USE_RARE_EVENT_SPEED and (np.random.uniform(0,1,1) > parameters.RARE_EVENT_THRESHOLD):
+        if (self.unique_id > 3) and (self.timer % 1500 == 0):
+            if parameters.USE_RARE_EVENT_SPEED and (np.random.uniform(0, 1, 1) > parameters.RARE_EVENT_THRESHOLD):
                 self.intrinsic_speed_factor = 0
             print(self)
 
@@ -85,6 +96,10 @@ class Robot(Agent):
             raise ValueError("state not recognized:" + str(self.state))
 
     def _step_start(self):
+        """
+        Implemented as in [6]
+        :return:
+        """
         self.is_stationary = True
         self.is_localized = False
         self.compute_gradient()
@@ -94,14 +109,16 @@ class Robot(Agent):
         return
 
     def _step_wait_to_move(self):
+        """
+        Implemented as in [6]
+        :return:
+        """
         self.is_stationary = True
         self.is_localized = False
         self.compute_gradient()
         self.localize()
         highest_gradient = 0
-        # neighbors = self.get_neighbors()
         no_moving_neighbors = all([neighbor.is_stationary for neighbor in self.neighbors])  # check if all
-        # neighbors are stationary
 
         if len(self.neighbors) == 0:
             raise RuntimeError("no neighbors")
@@ -113,9 +130,7 @@ class Robot(Agent):
                                             if not (neighbor.state == State.JOINED_SHAPE)]
             if len(neighbors_not_in_JOINT_SHAPE):
                 highest_gradient = max(neighbors_not_in_JOINT_SHAPE)
-            # print("[DEBUG_WAIT_TO_MOVE] ("+ str((self.unique_id, self._s_gradient_value)) + \
-            #       "): no_moving neighbors: " + str(no_moving_neighbors) +\
-            #       " highest gradient => " + str(highest_gradient))
+
             if self._s_gradient_value > highest_gradient:
                 self._next_state = State.MOVE_WHILE_OUTSIDE
             elif self._s_gradient_value == highest_gradient:
@@ -123,9 +138,9 @@ class Robot(Agent):
                                                 for neighbor in self.neighbors \
                                                 if (neighbor.get_s_gradient_value() == self._s_gradient_value) \
                                                 and not (neighbor.state == State.JOINED_SHAPE)]
-                # print(list_of_same_gradient_values)
+
                 highest_id = max(list_of_same_gradient_values)
-                # print("[DEBUG_WAIT_TO_MOVE]("+ str(self.unique_id) + "): same gradient Highest_ID = ", highest_id)
+
                 if self.unique_id > highest_id:
                     self._next_state = State.MOVE_WHILE_OUTSIDE
         else:
@@ -133,19 +148,26 @@ class Robot(Agent):
         return
 
     def _step_move_while_outside(self):
+        """
+        Implemented as in [6]
+        :return:
+        """
         self.is_stationary = False
         self.compute_gradient()
         self.localize()
         if self.is_in_shape():
             self._next_state = State.MOVE_WHILE_INSIDE
-        # todo: if distance to front edge-following robot > yield_distance ? how to ? by gathering distances of
-        # neighbors robot that are not stationnary ? if so, ok !
+        # Here: mechanism to prevent collision. Not implemented.
+        # if distance to front edge-following robot < yield_distance -> stop
         self.edge_follow()
         return
 
     def _step_move_while_inside(self):
+        """
+        Implemented as in [6]
+        :return:
+        """
         self.is_stationary = False
-
         self.compute_gradient()
         self.localize()
 
@@ -164,13 +186,19 @@ class Robot(Agent):
         return
 
     def _step_joined_shape(self):
+        """
+        Implemented as in [6]
+        :return:
+        """
         self.is_stationary = True
-
         pass
 
     def is_in_shape(self):
+        """
+        Indicates if the Robot is inside its configured shape.
+        :return: a boolean, True if Robot is inside its configure shape
+        """
         if not (self._has_met_coord and self.is_localized):
-            # print("is_in_shape => Not localized -> Abort")
             return False
         else:
             _x = (self._s_pos[0]) / self.shape.scale
@@ -178,9 +206,12 @@ class Robot(Agent):
             res = False
             if _x >= 0 and _y >= 0:
                 try:
+                    # manage the granularity of the rounding
                     _x = int(np.round(_x * 1000)) // 1000
                     _y = int(np.round(_y * 1000)) // 1000
                     map_shape = self.shape.map.shape
+
+                    # test if inside
                     if _x < map_shape[0] and _y < map_shape[1]:
                         res = self.shape.map[_x, _y] == 1
                     else:
@@ -190,14 +221,12 @@ class Robot(Agent):
                           str((self.shape.map.shape[0] - 1, self.shape.map.shape[1] - 1)))
                     res = False
 
-            # list_coord = ?
-            # res = utils.point_inside_polygon(self._s_pos[0],self._s_pos[1],list_coord, False)
             return res
 
     def get_s_pos(self):
         return self._s_pos
 
-    # pour test uniquement
+    # should be for test only
     def set_s_pos(self, new_pos):
         self._s_pos = new_pos
 
@@ -209,25 +238,29 @@ class Robot(Agent):
         :return: a list of the neighbors
         """
         neighbors = self.model.space.get_neighbors(self.pos, radius=self.radius, include_center=False)
-        # print("debug: get_neighbors")
-        # print("self.unique_id = ", self.unique_id)
-        # print("self.get_neighbors = ", [a.unique_id for a in neighbors])
-        # print("debug end : get_neighbors")
-
         return neighbors
 
     def get_distance(self, agent):
+        """
+
+        :param agent: a Robot
+        :return: the distance to agent, with or without added uncertainty.
+        """
         uncertainty = 0
         if parameters.USE_DISTANCE_UNCERTAINTY:
+            # using normal distribution, 3sigma
+            # uncertainty = np.random.normal(0, parameters.DISTANCE_ACCURACY/3, 1)
+            # using uniform distribution
             uncertainty = np.random.uniform(-parameters.DISTANCE_ACCURACY, parameters.DISTANCE_ACCURACY)
-        return np.linalg.norm(np.array(self.pos) - np.array(agent.pos), ord=2)+uncertainty
+
+        return np.linalg.norm(np.array(self.pos) - np.array(agent.pos), ord=2) + uncertainty
 
     def get_s_distance(self, agent):
-        '''
-        only if agent is stationary
+        """
+        compute the distance in local coordinate system, only if agent is stationary
         :param agent:
-        :return:
-        '''
+        :return: the distance computed if agent is stationary, or raise an exception if agent is not.
+        """
         if agent.is_stationary:
             a = np.array(self._s_pos)
             b = np.array(agent.get_s_pos())
@@ -236,21 +269,33 @@ class Robot(Agent):
             raise RuntimeError("Agent is not stationary!! ")
 
     def get_closest_distance(self, from_stationary_only=False):
+        """
+        :param from_stationary_only: if True, only returns the distance from stationary neighbors
+        :return: the smallest distance to neighbor.
+        """
         d = self.get_neighbors_distances(from_stationary_only)
         if len(d) > 0:
-            return np.min(d)  # self.get_neighbors_distances())
+            return np.min(d)
         else:
             return parameters.DISTANCE_MAX
 
     def get_closest_neighbor(self):
+        """
+        :return: the closest Robot of self
+        """
         if self.neighbors is None:
             self.neighbors = self.get_neighbors()
         assert len(self.neighbors) > 0, "neighbors is empty"
-        distances = np.array( tuple(map(lambda p: self.get_distance(p), self.neighbors)))
+        distances = np.array(tuple(map(lambda p: self.get_distance(p), self.neighbors)))
         ind = np.argmin(distances)
         return self.neighbors[ind]
 
     def get_neighbors_distances(self, from_stationary_only=False):
+        """
+        :param from_stationary_only:
+        :return: a numpy array of the distances to neighbors. The neighbors to includes depend on
+        the from_stationary_only parameter
+        """
         stationary_neighbors = []
         if self.neighbors is None:
             self.neighbors = self.get_neighbors()
@@ -259,8 +304,6 @@ class Robot(Agent):
         else:
             raise NotImplementedError
         if len(stationary_neighbors) > 0:
-            # sP = np.array([agent.pos for agent in stationary_neighbors])
-            # distances = np.linalg.norm(sP - np.array(self.pos), ord=2, axis=1)
             distances = np.array(tuple(map(lambda p: self.get_distance(p), stationary_neighbors)))
         else:
             distances = []
@@ -295,6 +338,10 @@ class Robot(Agent):
         self.prev_ef = self.current_ef
 
     def compute_gradient(self):
+        """
+        Compute the gradient value of self, according to [6]
+        :return: /
+        """
         self._s_gradient_value = parameters.GRADIENT_MAX
         if self.neighbors is None:
             self.neighbors = self.get_neighbors()
@@ -316,6 +363,11 @@ class Robot(Agent):
         # transmit => done through update
 
     def localize(self):
+        """
+        Depending on the global parameter TRILATERATION_TYPE, it computes the local coordinates of self,
+        stored in _s_pos. It also updates the boolean is_localized.
+        :return: /
+        """
         # n_list = []
         if self.neighbors is None:
             self.neighbors = self.get_neighbors()
@@ -335,7 +387,6 @@ class Robot(Agent):
                 self._has_met_coord = True
             if self.crossed > 1:
                 self.met_root_twice = True
-
 
             if parameters.TRILATERATION_TYPE == "opt":
                 s_pos_n_list = s_positions_neighbors
@@ -366,20 +417,18 @@ class Robot(Agent):
 
     def move_dir(self, direction_to_move):
         """
-        robot moves according to dir specified
+        robot moves according to dir specified, and a speed depending on each robots through its parameter
+        intrinsic_speed_factor.
         :param direction_to_move: Direction in which the robot wants to move (in its coordinate syste)
         :return: /
         """
-        # if self.is_stationary:
-        #     print("Attempt to move but robot stationary")
-        #     return
         dx, dy, = utils.get_deltas(direction_to_move, self.orn)
-        self._old_y= self.pos[1]
+        self._old_y = self.pos[1]
         new_pos = (self.pos[0] + dx * parameters.SPEED * self.intrinsic_speed_factor,
                    self.pos[1] + dy * parameters.SPEED * self.intrinsic_speed_factor)
 
-        if (self._old_y < self.limit_crossing)  and (new_pos[1] > self.limit_crossing):
-            self.crossed+=1
+        if (self._old_y < self.limit_crossing) and (new_pos[1] > self.limit_crossing):
+            self.crossed += 1
 
         self.model.space.move_agent(self, new_pos)
 
@@ -413,22 +462,22 @@ class Robot(Agent):
 
     def __str__(self):
         res = "robot:{ unique_id = " + str(self.unique_id) + \
-            "; state = " + str(self.state) + \
-            "; is_seed = " + str(self.is_seed) + \
-            "; is_stationary = " + str(self.is_stationary) + \
-            "; is_localized = " + str(self.is_localized) + \
-            "; pos = " + str(np.round(self.pos, 2)) + \
-            "; orn = " + str(self.orn) + \
-            "; s_pos = " + str(np.round(self._s_pos, 2)) + \
-            "; has_met_coord = " + str(self._has_met_coord) + \
-            "; met_root_twice = " + str(self.met_root_twice) + \
-            "; s_gradient = " + str(self._s_gradient_value) + \
-            "; intrinsic_speed_factor = " + str(self.intrinsic_speed_factor) + \
-            "}"
-            # "; neighbors = " + str([b.unique_id if b is not None else '/' for b in (self.neighbors or [])]) + \
-            # "; previous_neighbors = " + str([b.unique_id if b is not None else '/'
-            #                                  for b in (self.previous_neighbors or [])]) + \
-            # "}"
+              "; state = " + str(self.state) + \
+              "; is_seed = " + str(self.is_seed) + \
+              "; is_stationary = " + str(self.is_stationary) + \
+              "; is_localized = " + str(self.is_localized) + \
+              "; pos = " + str(np.round(self.pos, 2)) + \
+              "; orn = " + str(self.orn) + \
+              "; s_pos = " + str(np.round(self._s_pos, 2)) + \
+              "; has_met_coord = " + str(self._has_met_coord) + \
+              "; met_root_twice = " + str(self.met_root_twice) + \
+              "; s_gradient = " + str(self._s_gradient_value) + \
+              "; intrinsic_speed_factor = " + str(self.intrinsic_speed_factor) + \
+              "}"
+        #  "; neighbors = " + str([b.unique_id if b is not None else '/' for b in (self.neighbors or [])]) + \
+        #  "; previous_neighbors = " + str([b.unique_id if b is not None else '/'
+        #                                   for b in (self.previous_neighbors or [])]) + \
+        #  "}"
         return res
 
 
@@ -447,13 +496,14 @@ class Seed(Robot):
             self._s_pos = (-0.5, 0.0)
         else:
             self._s_gradient_value = 1
-
-        # we give the seed interal correct coordinates (-0.5, 0.0), (0.5, 0.0), (0.0, -0.8660254037844387), (0.0, 0.8660254037844387)
-        # shape as described in supplementary material
+        '''
+        # We give the seed interal correct coordinates (-0.5, 0.0), (0.5, 0.0), (0.0, -0.8660254037844387), 
+        # (0.0, 0.8660254037844387)
+        # This shape is described in supplementary material [6]
         #   (v3)
         # (v0)(v1)
         #   (v2)
-
+        '''
         if self.unique_id == 1:
             self._s_pos = (0.5, 0.0)
         if self.unique_id == 2:
@@ -465,6 +515,10 @@ class Seed(Robot):
         self._next_state = State.JOINED_SHAPE
 
     def compute_gradient(self):
+        '''
+        Overriding parent gradient method. A seed always has the same gradient
+        :return:
+        '''
         if self.is_gradient_seed:
             self._s_gradient_value = 0
         else:
@@ -472,9 +526,16 @@ class Seed(Robot):
         return
 
     def localize(self):
+        '''
+        Overriding parent localize method. A seed does not need to localize
+        :return:
+        '''
         pass
 
     def _step_start(self):
+        '''
+        :return:
+        '''
         self.is_stationary = True
         self.is_localized = True
         self.compute_gradient()
